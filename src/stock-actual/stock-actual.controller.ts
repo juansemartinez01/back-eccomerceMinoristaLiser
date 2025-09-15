@@ -75,14 +75,14 @@ export class StockActualController {
   //   console.log(`Stock reseteado a 4000 en ${result.updated} registros`);
   // }
 
-  @Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT) 
-  async handleResetStockDiario() {
-    try {
-      const result = await this.resetStock();
-      console.log(`⏰ [CRON TEST] Stock reseteado a 4000 en ${result.updated} registros`);
-    } catch (error) {
-      console.error('❌ Error al resetear stock:', error);
-    }
-  }
+  // @Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT) 
+  // async handleResetStockDiario() {
+  //   try {
+  //     const result = await this.resetStock();
+  //     console.log(`⏰ [CRON TEST] Stock reseteado a 4000 en ${result.updated} registros`);
+  //   } catch (error) {
+  //     console.error('❌ Error al resetear stock:', error);
+  //   }
+  // }
 
 }

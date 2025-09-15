@@ -143,16 +143,16 @@ export class StockActualService implements OnModuleInit {
    * Resetea el stock diario a 4000 unidades para todos los productos del almacén 1.
    * Este método se ejecuta automáticamente todos los días a la medianoche.
    */
-  @Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT)
-  async handleResetStockDiario() {
-  console.log('⏰ [CRON] Ejecutando tarea de reseteo de stock...');
-  try {
-    const result = await this.resetStockDiario();
-    console.log(`✅ [CRON] Stock reseteado a 4000 en ${result.updated} registros`);
-  } catch (error) {
-    console.error('❌ [CRON] Error al resetear stock automáticamente:', error);
-  }
-}
+//   @Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT)
+//   async handleResetStockDiario() {
+//   console.log('⏰ [CRON] Ejecutando tarea de reseteo de stock...');
+//   try {
+//     const result = await this.resetStockDiario();
+//     console.log(`✅ [CRON] Stock reseteado a 4000 en ${result.updated} registros`);
+//   } catch (error) {
+//     console.error('❌ [CRON] Error al resetear stock automáticamente:', error);
+//   }
+// }
 
 
 async resetStockDiario(): Promise<{ updated: number; totalProductos: number; message: string }> {
