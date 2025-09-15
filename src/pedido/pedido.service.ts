@@ -10,6 +10,7 @@ import { CreatePedidoWithItemsDto } from './dto/create-pedido-with-items.dto';
 import { UsuarioService } from 'src/usuario/usuario.service';
 import { PedidoManual } from 'src/pedido-manual/pedido-manual.entity';
 import { Producto } from 'src/producto/producto.entity';
+import { CrearPedidoWebDto } from './dto/create-pedido-web.dto';
 
 @Injectable()
 export class PedidoService {
@@ -317,6 +318,109 @@ export class PedidoService {
   };
 }
 
+
+
+private async precioWebDe(m: any, productoId: number): Promise<number> {
+    const listaId = Number(process.env.LISTA_PRECIOS_WEB) || 1;
+
+    // 1) precio por lista
+    const byLista = await m.query(`
+      SELECT precio_unitario::numeric
+      FROM precio_producto_lista
+      WHERE lista_id = $1 AND producto_id = $2
+      LIMIT 1
+    `, [listaId, productoId]);
+    if (byLista?.[0]?.precio_unitario) return Number(byLista[0].precio_unitario);
+
+    // 2) último precio_del_dia (si lo usás)
+    const byDia = await m.query(`
+      SELECT precio_unitario::numeric
+      FROM precio_del_dia
+      WHERE producto_id = $1
+      ORDER BY fecha DESC
+      LIMIT 1
+    `, [productoId]);
+    if (byDia?.[0]?.precio_unitario) return Number(byDia[0].precio_unitario);
+
+    // 3) fallback a productos.precio_base
+    const prod = await m.getRepository(Producto).findOne({
+      where: { id: productoId },
+      select: ['id','precio_base'],
+    });
+    return Number(prod?.precio_base ?? 0);
+  }
+
+  /** POST /pedidos/web */
+  async crearPedidoWeb(dto: CrearPedidoWebDto): Promise<Pedido> {
+    const clienteId = Number(process.env.CLIENTE_WEB_ID) || 999999;
+    const usuarioId = Number(process.env.USUARIO_WEB_ID) || 1;
+    const canal = process.env.CANAL_WEB || 'WEB';
+
+    return this.dataSource.transaction(async (m) => {
+      // 1) Crear pedido base
+      const pedido = m.getRepository(Pedido).create({
+        cliente: { id: clienteId } as any, // cliente “guest” fijo
+        usuario: { id: usuarioId } as any, // usuario “sistema web”
+        fechaHora: new Date(),
+        canal,
+        estado: 'PENDIENTE',
+        estadoPago: 'PENDIENTE', // o 'SIN_PAGO' si preferís
+        contacto: dto.contacto,   // JSONB
+      } as Pedido);
+
+      const saved = await m.getRepository(Pedido).save(pedido);
+
+      // 2) Items con precio calculado (no confiamos en el cliente)
+      for (const it of dto.items) {
+        const pUnit = await this.precioWebDe(m, it.producto_id);
+
+        const item = m.getRepository(ItemPedido).create({
+          pedido: saved,
+          producto: { id: it.producto_id } as any,
+          cantidad: it.cantidad,
+          precio_unitario: pUnit,
+        });
+        await m.getRepository(ItemPedido).save(item);
+      }
+
+      // 3) (opcional) NO tocamos stock aquí para simplificar
+      //     Se descuenta en entregarPedido()
+
+      return saved;
+    });
+  }
+
+  /** PUT /pedidos/:id/entregar */
+  async entregarPedido(pedidoId: number): Promise<Pedido> {
+    return this.dataSource.transaction(async (m) => {
+      const pedido = await m.getRepository(Pedido).findOne({
+        where: { id: pedidoId },
+        relations: ['items','items.producto'],
+      });
+      if (!pedido) throw new NotFoundException(`Pedido ${pedidoId} no encontrado`);
+      if (pedido.estado === 'ENTREGADO') return pedido;
+
+      // Descontar stock (simple: una fila por producto en stock_actual)
+      for (const it of pedido.items) {
+        const stock = await m.getRepository(StockActual).createQueryBuilder('sa')
+          .where('sa.producto_id = :pid', { pid: it.producto.id })
+          .orderBy('sa.last_updated', 'ASC')
+          .getOne();
+
+        if (!stock || stock.cantidad < it.cantidad) {
+          throw new BadRequestException(
+            `Stock insuficiente para ${it.producto?.id}. Disponible: ${stock?.cantidad ?? 0}`
+          );
+        }
+        stock.cantidad -= it.cantidad;
+        await m.getRepository(StockActual).save(stock);
+      }
+
+      pedido.estado = 'ENTREGADO';
+      await m.getRepository(Pedido).save(pedido);
+      return pedido;
+    });
+  }
 
 
 

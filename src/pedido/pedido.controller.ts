@@ -7,6 +7,7 @@ import { ItemPedido } from 'src/item-pedido/item-pedido.entity';
 import { ItemPedidoService } from 'src/item-pedido/item-pedido.service';
 import { Producto } from 'src/producto/producto.entity';
 import { CreatePedidoWithItemsDto } from './dto/create-pedido-with-items.dto';
+import { CrearPedidoWebDto } from './dto/create-pedido-web.dto';
 
 @Controller('pedidos')
 export class PedidoController {
@@ -87,6 +88,15 @@ export class PedidoController {
     return this.service.remove(+id);
   }
 
+  @Post('web')
+  crearPedidoWeb(@Body() dto: CrearPedidoWebDto) {
+    return this.service.crearPedidoWeb(dto);
+  }
+
+  @Put(':id/entregar')
+  entregar(@Param('id', ParseIntPipe) id: number) {
+    return this.service.entregarPedido(id);
+  }
   
   /**
    * GET /pedidos/:pedidoId/items

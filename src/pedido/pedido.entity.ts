@@ -48,4 +48,14 @@ export class Pedido {
 
   @Column({ type: 'text', nullable: true })
   nota?: string; // Comentarios sobre el pedido
+
+
+  @Column({ type: 'jsonb', nullable: true })
+  contacto?: {
+    nombre: string;
+    telefono: string;
+    direccion: string;
+    email?: string;
+    notas?: string;
+  };
 }
