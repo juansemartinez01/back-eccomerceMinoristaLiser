@@ -320,35 +320,29 @@ export class PedidoService {
 
 
 
+// ✅ PRECIO SOLO POR LISTA → fallback a productos.precio_base
 private async precioWebDe(m: any, productoId: number): Promise<number> {
-    const listaId = Number(process.env.LISTA_PRECIOS_WEB) || 1;
+  const listaId = Number(process.env.LISTA_PRECIOS_WEB) || 1;
 
-    // 1) precio por lista
-    const byLista = await m.query(`
-      SELECT precio_unitario::numeric
-      FROM precio_producto_lista
-      WHERE lista_id = $1 AND producto_id = $2
-      LIMIT 1
-    `, [listaId, productoId]);
-    if (byLista?.[0]?.precio_unitario) return Number(byLista[0].precio_unitario);
+  // Un único query: si hay precio en la lista, lo usa; si no, usa precio_base.
+  const row = await m.query(
+    `
+    SELECT
+      COALESCE(ppl.precio_unitario, p.precio_base)::numeric AS precio
+    FROM productos p
+    LEFT JOIN precio_producto_lista ppl
+      ON ppl.producto_id = p.id
+     AND ppl.lista_id = $2
+    WHERE p.id = $1
+    LIMIT 1
+    `,
+    [productoId, listaId],
+  );
 
-    // 2) último precio_del_dia (si lo usás)
-    const byDia = await m.query(`
-      SELECT precio_unitario::numeric
-      FROM precio_del_dia
-      WHERE producto_id = $1
-      ORDER BY fecha DESC
-      LIMIT 1
-    `, [productoId]);
-    if (byDia?.[0]?.precio_unitario) return Number(byDia[0].precio_unitario);
+  const precio = row?.[0]?.precio;
+  return precio !== undefined && precio !== null ? Number(precio) : 0;
+}
 
-    // 3) fallback a productos.precio_base
-    const prod = await m.getRepository(Producto).findOne({
-      where: { id: productoId },
-      select: ['id','precio_base'],
-    });
-    return Number(prod?.precio_base ?? 0);
-  }
 
   /** POST /pedidos/web */
   async crearPedidoWeb(dto: CrearPedidoWebDto): Promise<Pedido> {
