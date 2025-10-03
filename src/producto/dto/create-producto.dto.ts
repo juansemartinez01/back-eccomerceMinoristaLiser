@@ -53,11 +53,23 @@ export class CreateProductoDto {
   @MaxLength(100)
   id_interno: string;
 
-  @IsNumber() @Min(0) @IsOptional()
+  @IsNumber()
+  @Min(0)
+  @IsOptional()
   precioVacio?: number;
 
   @IsOptional()
   @IsString()
   @MaxLength(255)
   empresa?: string;
+
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  stock_inicial?: number; // si no viene → 0
+
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  almacenId?: number; // si no viene → 1
 }
