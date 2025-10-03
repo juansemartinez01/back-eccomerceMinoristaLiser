@@ -95,10 +95,7 @@ export class PedidoController {
     return this.service.crearPedidoWeb(dto);
   }
 
-  @Put(':id/entregar')
-  entregar(@Param('id', ParseIntPipe) id: number) {
-    return this.service.entregarPedido(id);
-  }
+  
   
   /**
    * GET /pedidos/:pedidoId/items
