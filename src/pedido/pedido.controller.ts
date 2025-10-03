@@ -8,6 +8,7 @@ import { ItemPedidoService } from 'src/item-pedido/item-pedido.service';
 import { Producto } from 'src/producto/producto.entity';
 import { CreatePedidoWithItemsDto } from './dto/create-pedido-with-items.dto';
 import { CrearPedidoWebDto } from './dto/create-pedido-web.dto';
+import { Public } from 'src/auth/isPublic';
 
 @Controller('pedidos')
 export class PedidoController {
@@ -88,6 +89,7 @@ export class PedidoController {
     return this.service.remove(+id);
   }
 
+  @Public()
   @Post('web')
   crearPedidoWeb(@Body() dto: CrearPedidoWebDto) {
     return this.service.crearPedidoWeb(dto);
